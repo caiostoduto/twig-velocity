@@ -45,7 +45,7 @@ Twig Velocity is a Minecraft proxy plugin designed for Velocity that implements 
 
 ### Installation
 1. Download the latest release from the [releases page](https://github.com/caiostoduto/twig-velocity/releases) or [build from source](#building-from-source).
-2. Place `twig-1.0-SNAPSHOT.jar` in your Velocity `plugins/` directory.
+2. Place `Twig.jar` in your Velocity `plugins/` directory.
 3. Start the Velocity proxy to generate the default configuration.
 4. Configure the plugin in `plugins/twig/config.yml`:
    ```yaml
@@ -147,7 +147,7 @@ cd twig-velocity
 ./gradlew build
 
 # The compiled plugin will be at:
-# build/libs/twig-1.0-SNAPSHOT.jar
+# build/libs/twig-1.0.0.jar
 ```
 
 ### Run local test server
@@ -177,7 +177,7 @@ To regenerate after modifying the proto file:
 
 ### Testing changes
 1. Build the plugin: `./gradlew shadowJar`
-2. Copy `build/libs/twig-1.0-SNAPSHOT.jar` to your test Velocity server's `plugins/` directory
+2. Copy `build/libs/twig-1.0.0.jar` to your test Velocity server's `plugins/` directory
 3. Restart the proxy
 4. Monitor logs for gRPC connection status and player authentication events
 
