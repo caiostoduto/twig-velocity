@@ -3,6 +3,8 @@ plugins {
     id 'eclipse'
     id 'org.jetbrains.gradle.plugin.idea-ext' version '1.1.8'
     id("xyz.jpenilla.run-velocity") version "2.3.1"
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+    id 'com.google.protobuf' version '0.9.5'
 }
 
 group = 'com.github.caiostoduto'
@@ -19,6 +21,14 @@ repositories {
 dependencies {
     compileOnly("com.velocitypowered:velocity-api:3.4.0-SNAPSHOT")
     annotationProcessor("com.velocitypowered:velocity-api:3.4.0-SNAPSHOT")
+    implementation("org.yaml:snakeyaml:2.5")
+    
+    // gRPC dependencies
+    implementation("io.grpc:grpc-netty-shaded:1.77.0")
+    implementation("io.grpc:grpc-protobuf:1.77.0")
+    implementation("io.grpc:grpc-stub:1.77.0")
+    implementation("com.google.protobuf:protobuf-java:4.33.1")
+    compileOnly("org.apache.tomcat:annotations-api:6.0.53")
 }
 
 tasks {
@@ -53,5 +63,57 @@ def generateTemplates = tasks.register('generateTemplates', Copy) { task ->
 
 sourceSets.main.java.srcDir(generateTemplates.map { it.outputs })
 
+sourceSets {
+    main {
+        proto {
+            srcDir 'proto'
+        }
+    }
+}
+
 project.idea.project.settings.taskTriggers.afterSync generateTemplates
 project.eclipse.synchronizationTasks(generateTemplates)
+
+shadowJar {
+    archiveClassifier.set('')
+    
+    // Relocate SnakeYAML to avoid conflicts with other plugins
+    relocate 'org.yaml.snakeyaml', 'com.github.caiostoduto.twig.libs.snakeyaml'
+    
+    // Relocate gRPC and protobuf to avoid conflicts with other plugins
+    relocate('io.grpc', 'com.github.caiostoduto.twig.libs.grpc') {
+        // Don't relocate the service provider files - we'll transform them instead
+    }
+    relocate 'com.google.protobuf', 'com.github.caiostoduto.twig.libs.protobuf'
+    relocate 'com.google.common', 'com.github.caiostoduto.twig.libs.guava'
+    relocate 'io.perfmark', 'com.github.caiostoduto.twig.libs.perfmark'
+    
+    // Transform service provider configuration files to use relocated class names
+    mergeServiceFiles()
+    
+    dependencies {
+        include(dependency('org.yaml:snakeyaml'))
+        include(dependency('io.grpc:.*'))
+        include(dependency('com.google.protobuf:.*'))
+        include(dependency('com.google.guava:.*'))
+        include(dependency('io.perfmark:.*'))
+    }
+}
+
+build.dependsOn shadowJar
+
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:3.25.1"
+    }
+    plugins {
+        grpc {
+            artifact = 'io.grpc:protoc-gen-grpc-java:1.60.0'
+        }
+    }
+    generateProtoTasks {
+        all()*.plugins {
+            grpc {}
+        }
+    }
+}

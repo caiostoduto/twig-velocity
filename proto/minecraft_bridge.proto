@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package minecraft_bridge;
+
+service MinecraftBridge {
+  // RPC: Register proxy and send server list (called on connection)
+  rpc RegisterProxy(ProxyRegistration) returns (RegistrationResponse);
+  
+  // RPC: Check if player is allowed to join a specific server
+  rpc CheckPlayerAccess(PlayerAccessRequest) returns (PlayerAccessResponse);
+  
+  // Pub/Sub: Subscribe to events (server-streaming)
+  rpc SubscribeEvents(EventSubscription) returns (stream ServerEvent);
+}
+
+/// Proxy Registration (sent on connection)
+message ProxyRegistration {
+  string proxy_id = 1;                  // Persistent proxy UUID
+  repeated MinecraftServer servers = 2; // List of servers managed by the proxy (velocity plugin)
+}
+
+message MinecraftServer {
+  string name = 1; // Server name (velocity)
+}
+
+message RegistrationResponse {
+  bool success = 1; // Registration success status
+}
+
+/// Player Access Check
+message PlayerAccessRequest {
+  string player_name = 1; // Persistent player name
+  string player_ipv4 = 2; // Player's IPv4 address
+  string server_name = 3; // Target server name (velocity)
+  string proxy_id = 4;    // Persistent proxy UUID
+}
+
+message PlayerAccessResponse {
+  AccessStatus status = 1;                // Access status
+  optional string authentication_url = 2; // [Optional] Authentication URL
+  optional uint32 expires_in = 3;         // [Optional] URL expiration time in seconds
+}
+
+enum AccessStatus {
+  ALLOWED = 0;         // Player is allowed to join
+  PROHIBITED = 1;      // Player is not allowed to join
+  REQUIRES_SIGNUP = 2; // Player needs to sign up on Discord
+}
+
+/// Event Subscription
+message EventSubscription {
+  repeated EventType event_types = 1; // Filter by event types (empty = all)
+  string proxy_id = 2;                // Persistent proxy UUID
+}
+
+// Server Events (Pub/Sub)
+message ServerEvent {
+  EventType event_type = 1;            // Type of event
+  int64 timestamp = 2;                 // Unix timestamp in milliseconds
+  optional string target_proxy_id = 3; // Target proxy ID (empty/null = broadcast to all)
+  
+  oneof event_data {
+    PlayerUpdateEvent player_update = 4;
+  }
+}
+
+// Event Types
+enum EventType {
+  PLAYER_UPDATE = 0;
+}
+
+// Player Update Event
+message PlayerUpdateEvent {
+  string player_name = 1; // Persistent player name
+  string player_ipv4 = 2; // Player's IPv4 address
+}

@@ -1,0 +1,11 @@
+# Twig Plugin Configuration
+# This is the default configuration file for the Twig plugin
+
+# General Configuration
+twig_uuid: "" # Twig UUID (leave empty to auto-generate)
+proxy_limbo: "limbo" # Limbo server name
+not_allowed_message: "You are not whitelisted on this server!"
+
+# gRPC Configuration
+grpc_host: "127.0.0.1"
+grpc_port: 50051
