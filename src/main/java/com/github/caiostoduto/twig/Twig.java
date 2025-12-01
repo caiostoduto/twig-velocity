@@ -137,8 +137,25 @@ public class Twig {
 
         // Subscribe to events with the handler callback and reconnection callback
         grpcClient.subscribeEvents(proxyId, playerUpdateHandler::handleEvent, () -> {
+            logger.info("gRPC event stream reconnected");
+
+            logger.info("Re-registering proxy with gRPC server...");
+            // Get proxy UUID from config
+            final String proxyUuid = configManager.getString("twig_uuid");
+
+            // Collect server names from Velocity
+            List<String> serverNames = proxyServer.getAllServers().stream()
+                    .map(server -> server.getServerInfo().getName())
+                    .filter(server -> !server.equals(configManager.getString("proxy_limbo")))
+                    .collect(Collectors.toList());
+
+            // Start async task to register proxy with retry logic
+            proxyServer.getScheduler().buildTask(this, () -> {
+                attemptProxyRegistration(proxyUuid, serverNames);
+            }).schedule();
+
             // When reconnected, check all players to ensure they still have access
-            logger.info("gRPC event stream reconnected, checking all players...");
+            logger.info("Checking all players...");
             playerUpdateHandler.checkAllPlayers();
         });
         logger.info("Subscribed to player_update events");
